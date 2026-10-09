@@ -1,0 +1,95 @@
+﻿@page "/"
+@inject HttpClient Http
+@using BlazorViaCep.Models
+
+<PageTitle>Home</PageTitle>
+
+<h1>Consulta Via Cep</h1>
+
+<div class="form-group">
+    <label for="cepInput">Digite o CEP:</label>
+    <input type="text" id="cepInput" class="form-control" @bind="cep" />
+</div>
+<button class="btn btn-primary mt-2" @onclick="ConsultarCep">Consultar</button>
+
+@if (viaCepReponse != null)
+{
+    <h3 class="mt-4">Resultado da Consulta:</h3>
+    <table class="table table-bordered mt-2">
+        <thead>
+            <tr>
+                <th>CEP</th>
+                <th>Logradouro</th>
+                <th>Complemento</th>
+                <th>Bairro</th>
+                <th>Cidade</th>
+                <th>Estado</th>
+                <th>DDD</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>@viaCepReponse.Cep</td>
+                <td>@viaCepReponse.Logradouro</td>
+                <td>@viaCepReponse.Complemento</td>
+                <td>@viaCepReponse.Bairro</td>
+                <td>@viaCepReponse.Localidade</td>
+                <td>@viaCepReponse.Uf</td>
+                <td>@viaCepReponse.Ddd</td>
+            </tr>
+        </tbody>
+    </table>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger mt-4" role="alert">
+        @errorMessage
+    </div>
+}
+
+@code {
+    private string cep = string.Empty;
+    private Endereco? viaCepReponse;
+    private string? errorMessage;
+
+    private async Task ConsultarCep()
+    {
+        errorMessage = string.Empty;
+        viaCepReponse = null;
+
+        if (string.IsNullOrWhiteSpace(cep))
+        {
+            errorMessage = "Por favor, insira um CEP válido.";
+            return;
+        }
+
+        var cepFormatado = new string(cep.Where(char.IsDigit).ToArray());
+
+        if (cepFormatado.Length != 8)
+        {
+            errorMessage = "O CEP deve conter exatamente 8 dígitos.";
+            return;
+        }
+
+        try
+        {
+            var url = $"https://viacep.com.br/ws/{cepFormatado}/json/";
+            viaCepReponse = await Http.GetFromJsonAsync<Endereco>(url);
+
+            if (viaCepReponse == null)
+            {
+                errorMessage = "CEP não encontrado.";
+                viaCepReponse = null;
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Erro ao consultar o CEP: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ocorreu um erro inesperado: {ex.Message}";
+        }
+    }
+}
